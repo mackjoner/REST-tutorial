@@ -59,13 +59,13 @@ def make_public_task(task):
 
 
 @app.route('/todo/api/v1.0/tasks', methods=['GET'])
-@auth.login_required
+# @auth.login_required
 def get_tasks():
     return jsonify({'tasks': [make_public_task(task) for task in tasks]})
 
 
 @app.route('/todo/api/v1.0/tasks/<int:task_id>', methods=['GET'])
-@auth.login_required
+# @auth.login_required
 def get_task(task_id):
     task = [task for task in tasks if task['id'] == task_id]
     if len(task) == 0:
@@ -73,15 +73,46 @@ def get_task(task_id):
     return jsonify({'task': make_public_task(task[0])})
 
 
-@app.route('/todo/api/v1.0/tasks', methods=['POST'])
-@auth.login_required
+@app.route('/todo/api/v1.0/tasks/new', methods=['GET', 'POST'])
+# @auth.login_required
 def create_task():
-    if not request.json or 'title' not in request.json:
-        abort(400)
+    headers = request.headers
+    # print dir(headers)
+    print headers
+    method = request.method
+    # dir(method)
+    print method
+    if is_json(request):
+        req_data = request.json
+    else:
+        req_data = request.values
+    # dir(req_data)
+    print req_data
+
+    # if not request.json or 'title' not in request.json:
+    #     abort(400)
     task = {
         'id': tasks[-1]['id'] + 1,
-        'title': request.json['title'],
-        'description': request.json.get('description', ""),
+        'title': req_data.get('title'),  # request.json['title'],
+        'description': req_data.get('description', ''),  # request.json.get('description', ""),
+        'done': False
+    }
+    tasks.append(task)
+    return jsonify({'task': make_public_task(task)}), 201
+
+
+@app.route('/todo/api/v1.0/tasks', methods=['POST'])
+# @auth.login_required
+def add_task():
+    req_data = request.values
+    print req_data
+
+    # if not request.json or 'title' not in request.json:
+    #     abort(400)
+    task = {
+        'id': tasks[-1]['id'] + 1,
+        'title': req_data.get('title'),  # request.json['title'],
+        'description': req_data.get('description', ''),  # request.json.get('description', ""),
         'done': False
     }
     tasks.append(task)
@@ -89,7 +120,7 @@ def create_task():
 
 
 @app.route('/todo/api/v1.0/tasks/<int:task_id>', methods=['PUT'])
-@auth.login_required
+# @auth.login_required
 def update_task(task_id):
     task = [task for task in tasks if task['id'] == task_id]
     if len(task) == 0:
@@ -112,7 +143,7 @@ def update_task(task_id):
 
 
 @app.route('/todo/api/v1.0/tasks/<int:task_id>', methods=['DELETE'])
-@auth.login_required
+# @auth.login_required
 def delete_task(task_id):
     task = [task for task in tasks if task['id'] == task_id]
     if len(task) == 0:
@@ -120,6 +151,20 @@ def delete_task(task_id):
     tasks.remove(task[0])
     return jsonify({'result': True})
 
+
+def is_json(request):
+    """Indicates if this request is JSON or not.  By default a request
+    is considered to include JSON data if the mimetype is
+    :mimetype:`application/json` or :mimetype:`application/*+json`.
+
+    .. versionadded:: 1.0
+    """
+    mt = request.mimetype
+    if mt == 'application/json':
+        return True
+    if mt.startswith('application/') and mt.endswith('+json'):
+        return True
+    return False
 
 if __name__ == '__main__':
     app.run(debug=True)
